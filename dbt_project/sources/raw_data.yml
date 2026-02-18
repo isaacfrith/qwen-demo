@@ -1,0 +1,44 @@
+version: 2
+
+sources:
+  - name: raw_data
+    description: Raw data sources from landing zone
+    database: raw  # This will be configured via dbt_project.yml vars
+    schema: landing_zone
+    
+    tables:
+      - name: customers
+        description: Customer information from source system
+        columns:
+          - name: id
+            description: Unique identifier for customer
+            tests:
+              - unique
+              - not_null
+          - name: first_name
+            description: Customer's first name
+          - name: last_name
+            description: Customer's last name
+          - name: email
+            description: Customer's email address
+          - name: created_at
+            description: Timestamp when customer record was created
+      
+      - name: orders
+        description: Order information from source system
+        columns:
+          - name: id
+            description: Unique identifier for order
+            tests:
+              - unique
+              - not_null
+          - name: customer_id
+            description: Reference to customer who placed the order
+          - name: product_id
+            description: Reference to product ordered
+          - name: quantity
+            description: Quantity of product ordered
+          - name: price
+            description: Price per unit of product
+          - name: order_date
+            description: Date when order was placed
