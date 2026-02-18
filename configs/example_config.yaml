@@ -1,0 +1,85 @@
+project_name: "Example Databricks Project"
+version: "1.0.0"
+
+sources:
+  raw_data:
+    database: "raw"
+    schema: "landing_zone"
+
+targets:
+  silver_layer:
+    database: "silver"
+    schema: "processed"
+  gold_layer:
+    database: "gold"
+    schema: "analytics"
+
+transformations:
+  - name: "customer_silver"
+    source_table: "raw_data.customers"
+    target_table: "silver_layer.customer_dim"
+    transformation_type: "silver"
+    columns:
+      - name: "id"
+        alias: "customer_id"
+      - name: "first_name"
+        alias: "customer_first_name"
+      - name: "last_name"
+        alias: "customer_last_name"
+      - name: "email"
+        alias: "customer_email"
+      - name: "created_at"
+        alias: "customer_created_at"
+    filters:
+      - "email IS NOT NULL"
+      - "LENGTH(first_name) > 0"
+    schedule: "0 2 * * *"  # Daily at 2 AM
+
+  - name: "order_silver"
+    source_table: "raw_data.orders"
+    target_table: "silver_layer.order_fact"
+    transformation_type: "silver"
+    columns:
+      - name: "id"
+        alias: "order_id"
+      - name: "customer_id"
+        alias: "customer_key"
+      - name: "product_id"
+        alias: "product_key"
+      - name: "quantity"
+        alias: "order_quantity"
+      - name: "price"
+        alias: "unit_price"
+      - name: "order_date"
+        alias: "order_timestamp"
+    filters:
+      - "quantity > 0"
+      - "price > 0"
+    schedule: "0 2 * * *"  # Daily at 2 AM
+
+  - name: "customer_gold"
+    source_table: "silver_layer.customer_dim"
+    target_table: "gold_layer.customer_summary"
+    transformation_type: "gold"
+    columns:
+      - name: "customer_id"
+        alias: "id"
+      - name: "customer_first_name"
+        alias: "first_name"
+      - name: "customer_last_name"
+        alias: "last_name"
+      - name: "customer_email"
+        alias: "email"
+      - name: "customer_created_at"
+        alias: "created_at"
+      - expression: "COUNT(orders.order_id)"
+        alias: "total_orders"
+    joins:
+      - type: "left"
+        table: "silver_layer.order_fact"
+        condition: "customer_dim.customer_id = order_fact.customer_key"
+    aggregations:
+      - column: "order_id"
+        function: "COUNT"
+        group_by: ["customer_id"]
+    schedule: "0 3 * * *"  # Daily at 3 AM
